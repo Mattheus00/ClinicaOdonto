@@ -150,49 +150,51 @@ export default function Agenda({ onShowModal, showToast }) {
                 </div>
                 {loading ? <div className="loading-spinner" /> : (
                     <>
-                        <div className="week-header">
-                            <div />
-                            {weekDays.map((d, i) => (
-                                <div key={i} className={`week-header-cell ${d.getTime() === today.getTime() ? 'today' : ''}`}>
-                                    <div className="day-name">{DAY_NAMES[d.getDay()]}</div>
-                                    <div className="day-number">{String(d.getDate()).padStart(2, '0')}</div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="time-grid-wrapper">
-                            <div className="time-grid">
-                                {isCurrentWeek && <CurrentTimeLine />}
-                                {TIME_SLOTS.map(time => (
-                                    <React.Fragment key={time}>
-                                        <div className="time-label">{time}</div>
-                                        {weekDays.map((d, i) => {
-                                            const dateStr = formatDate(d)
-                                            const appt = getAppointment(dateStr, time)
-                                            const isDragOver = dragOver === `${dateStr}-${time}`
-                                            return (
-                                                <div key={i} className={`time-slot ${isDragOver ? 'drag-over' : ''}`}
-                                                    onDragOver={(e) => handleDragOver(e, dateStr, time)}
-                                                    onDragLeave={handleDragLeave}
-                                                    onDrop={(e) => handleDrop(e, dateStr, time)}
-                                                    onClick={() => !appt && onShowModal('appointment', { date: dateStr, time })}
-                                                >
-                                                    {appt && (
-                                                        <div
-                                                            className={`appointment-card ${appt.status}`}
-                                                            draggable
-                                                            onDragStart={(e) => handleDragStart(e, appt)}
-                                                            onClick={(e) => { e.stopPropagation(); onShowModal('appointment-detail', appt) }}
-                                                            style={{ borderLeftColor: getDentistColor(appt.dentist) }}
-                                                        >
-                                                            <div className="appt-name">{appt.patients?.name || '—'}</div>
-                                                            <div className="appt-procedure">{appt.procedure}</div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )
-                                        })}
-                                    </React.Fragment>
+                        <div className="agenda-grid-scroll">
+                            <div className="week-header">
+                                <div className="week-header-spacer" />
+                                {weekDays.map((d, i) => (
+                                    <div key={i} className={`week-header-cell ${d.getTime() === today.getTime() ? 'today' : ''}`}>
+                                        <div className="day-name">{DAY_NAMES[d.getDay()]}</div>
+                                        <div className="day-number">{String(d.getDate()).padStart(2, '0')}</div>
+                                    </div>
                                 ))}
+                            </div>
+                            <div className="time-grid-wrapper">
+                                <div className="time-grid">
+                                    {isCurrentWeek && <CurrentTimeLine />}
+                                    {TIME_SLOTS.map(time => (
+                                        <React.Fragment key={time}>
+                                            <div className="time-label">{time}</div>
+                                            {weekDays.map((d, i) => {
+                                                const dateStr = formatDate(d)
+                                                const appt = getAppointment(dateStr, time)
+                                                const isDragOver = dragOver === `${dateStr}-${time}`
+                                                return (
+                                                    <div key={i} className={`time-slot ${isDragOver ? 'drag-over' : ''}`}
+                                                        onDragOver={(e) => handleDragOver(e, dateStr, time)}
+                                                        onDragLeave={handleDragLeave}
+                                                        onDrop={(e) => handleDrop(e, dateStr, time)}
+                                                        onClick={() => !appt && onShowModal('appointment', { date: dateStr, time })}
+                                                    >
+                                                        {appt && (
+                                                            <div
+                                                                className={`appointment-card ${appt.status}`}
+                                                                draggable
+                                                                onDragStart={(e) => handleDragStart(e, appt)}
+                                                                onClick={(e) => { e.stopPropagation(); onShowModal('appointment-detail', appt) }}
+                                                                style={{ borderLeftColor: getDentistColor(appt.dentist) }}
+                                                            >
+                                                                <div className="appt-name">{appt.patients?.name || '—'}</div>
+                                                                <div className="appt-procedure">{appt.procedure}</div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </>

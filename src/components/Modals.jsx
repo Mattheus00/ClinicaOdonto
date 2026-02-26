@@ -3,7 +3,6 @@ import { supabase, supabaseConfigured } from '../lib/supabase'
 import { IconX } from './Icons'
 import ConfirmDialog from './ConfirmDialog'
 
-const PROCEDURES = ['Consulta inicial', 'Consulta de retorno', 'Limpeza e profilaxia', 'Restauração', 'Extração', 'Canal', 'Clareamento', 'Ajuste ortodôntico', 'Avaliação', 'Cirurgia']
 const DENTISTS = ['Dra. Ana Letícia']
 const TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
 const STATUSES = ['agendado', 'confirmado', 'realizado', 'cancelado']
@@ -13,20 +12,25 @@ const CATEGORIES = ['Consulta', 'Procedimento', 'Material', 'Aluguel', 'Funcion�
 export function AppointmentModal({ onClose, showToast, prefill, onSaved }) {
     const [form, setForm] = React.useState({
         patient_id: '', dentist: DENTISTS[0], date: prefill?.date || '', time: prefill?.time || '08:00',
-        procedure: PROCEDURES[0], status: 'agendado', notes: ''
+        procedure_id: '', procedure_name: '', status: 'agendado', notes: '', value: 0
     })
     const [patients, setPatients] = React.useState([])
+    const [procedures, setProcedures] = React.useState([])
     const [saving, setSaving] = React.useState(false)
 
     React.useEffect(() => {
         if (!supabaseConfigured) {
             setPatients([
-                { id: 'p1', name: 'Ana Paula Ferreira' }, { id: 'p2', name: 'João Mendes' }, { id: 'p3', name: 'Camila Rocha' },
-                { id: 'p4', name: 'Roberto Santos' }, { id: 'p5', name: 'Mariana Oliveira' }
+                { id: 'p1', name: 'Ana Paula Ferreira' }, { id: 'p2', name: 'João Mendes' }, { id: 'p3', name: 'Camila Rocha' }
+            ])
+            setProcedures([
+                { id: 'demo1', name: 'Limpeza e profilaxia', value: 250 },
+                { id: 'demo2', name: 'Restauração simples', value: 300 }
             ])
             return
         }
         supabase.from('patients').select('id, name').order('name').then(({ data }) => setPatients(data || []))
+        supabase.from('procedures').select('id, name, value').order('name').then(({ data }) => setProcedures(data || []))
     }, [])
 
     async function save(e) {
@@ -45,7 +49,10 @@ export function AppointmentModal({ onClose, showToast, prefill, onSaved }) {
             showToast(`⚠️ Conflito — ${form.dentist} já tem consulta às ${form.time} nessa data.`, 'error')
             setSaving(false); return
         }
-        const { error } = await supabase.from('appointments').insert(form)
+        const { error } = await supabase.from('appointments').insert({
+            patient_id: form.patient_id, dentist: form.dentist, date: form.date, time: form.time,
+            procedure: form.procedure_name || form.procedure_id, status: form.status, notes: form.notes, value: parseFloat(form.value)
+        })
         setSaving(false)
         if (error) showToast('Erro: ' + error.message, 'error')
         else { showToast('✅ Consulta agendada com sucesso!'); onSaved?.(); onClose() }
@@ -90,9 +97,19 @@ export function AppointmentModal({ onClose, showToast, prefill, onSaved }) {
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Procedimento</label>
-                                <select className="form-select" value={form.procedure} onChange={e => u('procedure', e.target.value)}>
-                                    {PROCEDURES.map(p => <option key={p} value={p}>{p}</option>)}
+                                <select className="form-select" value={form.procedure_id} onChange={e => {
+                                    const proc = procedures.find(p => p.id === e.target.value)
+                                    setForm(prev => ({ ...prev, procedure_id: e.target.value, procedure_name: proc?.name || '', value: proc?.value || 0 }))
+                                }}>
+                                    <option value="">Selecione...</option>
+                                    {procedures.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label className="form-label">Valor (R$)</label>
+                                <input type="number" step="0.01" className="form-input" value={form.value} onChange={e => u('value', e.target.value)} />
                             </div>
                         </div>
                         <div className="form-group">
@@ -351,11 +368,23 @@ export function TransactionModal({ onClose, showToast, onSaved }) {
 export function ProntuarioModal({ patient, onClose, showToast, onSaved }) {
     const [form, setForm] = React.useState({
         date: new Date().toISOString().split('T')[0], dentist: DENTISTS[0],
-        procedure: PROCEDURES[0], notes: ''
+        procedure_id: '', procedure_name: '', notes: ''
     })
+    const [procedures, setProcedures] = React.useState([])
     const [files, setFiles] = React.useState([])
     const [saving, setSaving] = React.useState(false)
     const u = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+    React.useEffect(() => {
+        if (!supabaseConfigured) {
+            setProcedures([
+                { id: 'demo1', name: 'Limpeza e profilaxia', value: 250 },
+                { id: 'demo2', name: 'Restauração simples', value: 300 }
+            ])
+            return
+        }
+        supabase.from('procedures').select('id, name').order('name').then(({ data }) => setProcedures(data || []))
+    }, [])
 
     async function save(e) {
         e.preventDefault()
@@ -363,9 +392,13 @@ export function ProntuarioModal({ patient, onClose, showToast, onSaved }) {
         if (!supabaseConfigured) {
             setSaving(false); showToast('✅ Registro adicionado ao prontuário! (demo)'); onSaved?.(); onClose(); return
         }
+        const entryData = {
+            date: form.date, dentist: form.dentist, procedure: form.procedure_name || form.procedure_id, notes: form.notes
+        }
+
         const { data: entry, error } = await supabase
             .from('prontuario_entries')
-            .insert({ ...form, patient_id: patient.id })
+            .insert({ ...entryData, patient_id: patient.id })
             .select().single()
         if (error) { showToast('Erro: ' + error.message, 'error'); setSaving(false); return }
 
@@ -406,8 +439,12 @@ export function ProntuarioModal({ patient, onClose, showToast, onSaved }) {
                         </div>
                         <div className="form-group">
                             <label className="form-label">Procedimento</label>
-                            <select className="form-select" value={form.procedure} onChange={e => u('procedure', e.target.value)}>
-                                {PROCEDURES.map(p => <option key={p} value={p}>{p}</option>)}
+                            <select className="form-select" value={form.procedure_id} onChange={e => {
+                                const proc = procedures.find(p => p.id === e.target.value)
+                                setForm(prev => ({ ...prev, procedure_id: e.target.value, procedure_name: proc?.name || '' }))
+                            }}>
+                                <option value="">Selecione...</option>
+                                {procedures.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                         </div>
                         <div className="form-group">
@@ -424,6 +461,61 @@ export function ProntuarioModal({ patient, onClose, showToast, onSaved }) {
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
                         <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar Registro'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+export function ProcedureModal({ procedure, onClose, showToast, onSaved }) {
+    const isEdit = !!procedure
+    const [form, setForm] = React.useState({
+        name: procedure?.name || '', value: procedure?.value || ''
+    })
+    const [saving, setSaving] = React.useState(false)
+    const u = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+    async function save(e) {
+        e.preventDefault()
+        if (!form.name.trim()) { showToast('Nome é obrigatório.', 'error'); return }
+        setSaving(true)
+        if (!supabaseConfigured) {
+            setSaving(false); showToast(`✅ Procedimento ${isEdit ? 'atualizado' : 'cadastrado'}! (demo)`); onSaved?.(); onClose(); return
+        }
+        const dataToSave = { name: form.name, value: parseFloat(form.value) || 0 }
+        let result
+        if (isEdit) {
+            result = await supabase.from('procedures').update(dataToSave).eq('id', procedure.id)
+        } else {
+            result = await supabase.from('procedures').insert(dataToSave)
+        }
+        setSaving(false)
+        if (result.error) showToast('Erro: ' + result.error.message, 'error')
+        else { showToast(`✅ Procedimento ${isEdit ? 'atualizado' : 'cadastrado'}!`); onSaved?.(); onClose() }
+    }
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title">{isEdit ? '✏️ Editar Procedimento' : '➕ Novo Procedimento'}</h2>
+                    <button className="btn-icon" onClick={onClose}><IconX /></button>
+                </div>
+                <form onSubmit={save}>
+                    <div className="modal-body">
+                        <div className="form-group">
+                            <label className="form-label">Nome do Procedimento *</label>
+                            <input className="form-input" value={form.name} onChange={e => u('name', e.target.value)} placeholder="Ex: Clareamento a Laser" />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Valor Padrão (R$) *</label>
+                            <input type="number" step="0.01" className="form-input" value={form.value} onChange={e => u('value', e.target.value)} placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+                        <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
                     </div>
                 </form>
             </div>

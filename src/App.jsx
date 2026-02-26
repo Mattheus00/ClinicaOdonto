@@ -5,14 +5,16 @@ import Dashboard from './components/Dashboard'
 import Agenda from './components/Agenda'
 import Patients from './components/Patients'
 import Financeiro from './components/Financeiro'
+import Procedimentos from './components/Procedimentos'
 import Toast from './components/Toast'
-import { AppointmentModal, AppointmentDetailModal, PatientModal, TransactionModal, ProntuarioModal } from './components/Modals'
-import { IconDashboard, IconCalendar, IconUsers, IconDollar, IconLogoAL, IconBell, IconSettings, IconClock, IconX, IconCheck } from './components/Icons'
+import { AppointmentModal, AppointmentDetailModal, PatientModal, TransactionModal, ProntuarioModal, ProcedureModal } from './components/Modals'
+import { IconDashboard, IconCalendar, IconUsers, IconDollar, IconLogoAL, IconBell, IconSettings, IconClock, IconX, IconCheck, IconListCheck } from './components/Icons'
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
   { id: 'agenda', label: 'Agenda', icon: IconCalendar },
   { id: 'pacientes', label: 'Pacientes', icon: IconUsers },
+  { id: 'procedimentos', label: 'Procedimentos', icon: IconListCheck },
   { id: 'financeiro', label: 'Financeiro', icon: IconDollar },
 ]
 
@@ -20,6 +22,7 @@ const TAB_TITLES = {
   dashboard: 'Dashboard',
   agenda: 'Agenda',
   pacientes: 'Pacientes',
+  procedimentos: 'Procedimentos',
   financeiro: 'Financeiro',
 }
 
@@ -308,6 +311,7 @@ export default function App() {
           {activeTab === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
           {activeTab === 'agenda' && <Agenda onShowModal={openModal} showToast={showToast} />}
           {activeTab === 'pacientes' && <Patients onShowModal={openModal} showToast={showToast} />}
+          {activeTab === 'procedimentos' && <Procedimentos onShowModal={openModal} showToast={showToast} />}
           {activeTab === 'financeiro' && <Financeiro onShowModal={openModal} showToast={showToast} extraTransactions={confirmedTransactions} />}
         </div>
       </main>
@@ -324,6 +328,9 @@ export default function App() {
       )}
       {modal?.type === 'patient-edit' && (
         <PatientModal patient={modal.data} onClose={closeModal} showToast={showToast} onSaved={refresh} />
+      )}
+      {modal?.type === 'procedure' && (
+        <ProcedureModal procedure={modal.data} onClose={closeModal} showToast={showToast} onSaved={refresh} />
       )}
       {modal?.type === 'transaction' && (
         <TransactionModal onClose={closeModal} showToast={showToast} onSaved={refresh} />

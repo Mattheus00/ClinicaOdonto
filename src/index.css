@@ -1181,9 +1181,23 @@ table tbody tr:last-child td {
 /* Week Header */
 .week-header {
   display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
+  grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
   gap: 0;
   margin-bottom: 0;
+  min-width: max-content;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-card);
+}
+
+.week-header-spacer {
+  position: sticky;
+  left: 0;
+  z-index: 25;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .week-header-cell {
@@ -1226,22 +1240,54 @@ table tbody tr:last-child td {
   color: var(--primary);
 }
 
+/* Responsive Agenda Grid */
+.agenda-grid-scroll {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  /* Firefox specific */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-300) var(--bg-card);
+}
+
+.agenda-grid-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.agenda-grid-scroll::-webkit-scrollbar-track {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+}
+
+.agenda-grid-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary-300);
+  border-radius: var(--radius-full);
+}
+
 /* Time Grid */
 .time-grid-wrapper {
-  flex: 1;
-  overflow-y: auto;
   position: relative;
-  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .time-grid {
   display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
+  grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
   gap: 0;
   position: relative;
+  min-width: max-content;
+  padding-top: 8px;
 }
 
 .time-label {
+  position: sticky;
+  left: 0;
+  z-index: 5;
   background: var(--bg-card);
   padding: 0 12px;
   font-size: 0.75rem;
@@ -1252,7 +1298,9 @@ table tbody tr:last-child td {
   height: 60px;
   display: flex;
   align-items: flex-start;
+  /* keep flex-start */
   justify-content: flex-end;
+  /* right-aligned */
   padding-top: 0;
   transform: translateY(-8px);
   border-right: 1px solid var(--border-light);
@@ -1951,4 +1999,24 @@ table tbody tr:last-child td {
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+@media (max-width: 1024px) {
+  .agenda-container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .agenda-main {
+    height: 600px;
+  }
+
+  .agenda-sidebar {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .week-nav {
+    flex-wrap: wrap;
+  }
 }
