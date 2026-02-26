@@ -26,21 +26,12 @@ const TAB_TITLES = {
   financeiro: 'Financeiro',
 }
 
-// Demo appointments for notifications
-const DEMO_TODAY_APPOINTMENTS = [
-  { id: 'n1', time: '08:00', patient: 'Ana Paula Ferreira', procedure: 'Limpeza e profilaxia', dentist: 'Dra. Ana Letícia', value: 250 },
-  { id: 'n2', time: '09:00', patient: 'João Mendes', procedure: 'Restauração', dentist: 'Dra. Ana Letícia', value: 400 },
-  { id: 'n3', time: '10:00', patient: 'Camila Rocha', procedure: 'Consulta inicial', dentist: 'Dra. Ana Letícia', value: 180 },
-  { id: 'n4', time: '14:00', patient: 'Roberto Santos', procedure: 'Canal', dentist: 'Dra. Ana Letícia', value: 800 },
-  { id: 'n5', time: '15:00', patient: 'Mariana Oliveira', procedure: 'Clareamento', dentist: 'Dra. Ana Letícia', value: 600 },
-]
-
-function getNotifications(confirmedIds) {
+function getNotifications(confirmedIds, todayAppointments) {
   const now = new Date()
   const notifications = []
 
-  DEMO_TODAY_APPOINTMENTS.forEach(appt => {
-    if (confirmedIds.has(appt.id)) return // Skip already confirmed
+  todayAppointments.forEach(appt => {
+    if (confirmedIds.has(appt.id) || appt.status === 'cancelado') return // Skip already confirmed or cancelled
 
     const [h, m] = appt.time.split(':').map(Number)
     const apptTime = new Date()
@@ -70,13 +61,14 @@ function getNotifications(confirmedIds) {
 
   // Always show next upcoming appointment
   if (notifications.length === 0) {
-    const upcoming = DEMO_TODAY_APPOINTMENTS.filter(appt => {
-      if (confirmedIds.has(appt.id)) return false
+    const upcoming = todayAppointments.filter(appt => {
+      if (confirmedIds.has(appt.id) || appt.status === 'cancelado') return false
       const [h, m] = appt.time.split(':').map(Number)
       const apptTime = new Date()
       apptTime.setHours(h, m, 0, 0)
       return apptTime.getTime() > now.getTime()
-    })
+    }).sort((a, b) => a.time.localeCompare(b.time))
+
     if (upcoming.length > 0) {
       const next = upcoming[0]
       const [h, m] = next.time.split(':').map(Number)
@@ -96,8 +88,8 @@ function getNotifications(confirmedIds) {
   }
 
   // Also show past unconfirmed appointments as "pending payment"
-  DEMO_TODAY_APPOINTMENTS.forEach(appt => {
-    if (confirmedIds.has(appt.id)) return
+  todayAppointments.forEach(appt => {
+    if (confirmedIds.has(appt.id) || appt.status === 'cancelado') return
     const [h, m] = appt.time.split(':').map(Number)
     const apptTime = new Date()
     apptTime.setHours(h, m, 0, 0)
@@ -115,23 +107,23 @@ function getNotifications(confirmedIds) {
   return notifications
 }
 
-function NotificationDropdown({ isOpen, onClose, onConfirmPayment, confirmedIds }) {
+function NotificationDropdown({ isOpen, onClose, onConfirmPayment, confirmedIds, todayAppointments }) {
   const [notifications, setNotifications] = React.useState([])
   const dropdownRef = React.useRef(null)
 
   React.useEffect(() => {
-    setNotifications(getNotifications(confirmedIds))
+    setNotifications(getNotifications(confirmedIds, todayAppointments))
     const interval = setInterval(() => {
-      setNotifications(getNotifications(confirmedIds))
+      setNotifications(getNotifications(confirmedIds, todayAppointments))
     }, 30000)
     return () => clearInterval(interval)
-  }, [confirmedIds])
+  }, [confirmedIds, todayAppointments])
 
   React.useEffect(() => {
     if (!isOpen) return
     // Refresh on open
-    setNotifications(getNotifications(confirmedIds))
-  }, [isOpen, confirmedIds])
+    setNotifications(getNotifications(confirmedIds, todayAppointments))
+  }, [isOpen, confirmedIds, todayAppointments])
 
   React.useEffect(() => {
     if (!isOpen) return
@@ -196,11 +188,46 @@ export default function App() {
   const [confirmedIds, setConfirmedIds] = React.useState(new Set())
   const [confirmedTransactions, setConfirmedTransactions] = React.useState([])
 
+  const [todayAppointments, setTodayAppointments] = React.useState([])
+
+  React.useEffect(() => {
+    async function fetchTodayData() {
+      if (!supabaseConfigured) {
+        setTodayAppointments([
+          { id: 'n1', time: '08:00', patient: 'Ana Paula Ferreira', procedure: 'Avaliação odontológica', dentist: 'Dra. Ana Letícia', value: 180, status: 'agendado' },
+          { id: 'n2', time: '09:00', patient: 'João Mendes', procedure: 'Profilaxia (limpeza)', dentist: 'Dra. Ana Letícia', value: 250, status: 'agendado' },
+          { id: 'n3', time: '10:00', patient: 'Camila Rocha', procedure: 'Restaurações', dentist: 'Dra. Ana Letícia', value: 300, status: 'agendado' },
+        ])
+        return
+      }
+
+      const today = new Date()
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id, time, date, procedure, dentist, value, status,
+          patients(name)
+        `)
+        .eq('date', dateStr)
+
+      if (!error && data) {
+        const mapped = data.map(d => ({
+          ...d,
+          patient: d.patients?.name || 'Desconhecido'
+        }))
+        setTodayAppointments(mapped)
+      }
+    }
+    fetchTodayData()
+  }, [refreshKey])
+
   const showToast = (message, type = 'success') => setToast({ message, type })
   const refresh = () => setRefreshKey(k => k + 1)
 
-  const unconfirmedCount = DEMO_TODAY_APPOINTMENTS.filter(a => {
-    if (confirmedIds.has(a.id)) return false
+  const unconfirmedCount = todayAppointments.filter(a => {
+    if (confirmedIds.has(a.id) || a.status === 'cancelado') return false
     const [h, m] = a.time.split(':').map(Number)
     const t = new Date(); t.setHours(h, m, 0, 0)
     return t.getTime() < Date.now() // Past appointments with pending payment
@@ -298,6 +325,7 @@ export default function App() {
                 onClose={() => setShowNotifications(false)}
                 onConfirmPayment={handleConfirmPayment}
                 confirmedIds={confirmedIds}
+                todayAppointments={todayAppointments}
               />
             </div>
             <button className="topbar-icon-btn" title="Configurações">
