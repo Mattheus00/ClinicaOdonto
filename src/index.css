@@ -1181,7 +1181,7 @@ table tbody tr:last-child td {
 /* Week Header */
 .week-header {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 80px repeat(7, 1fr);
   gap: 0;
   margin-bottom: 0;
 }
@@ -1236,15 +1236,15 @@ table tbody tr:last-child td {
 
 .time-grid {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 80px repeat(7, 1fr);
   gap: 0;
   position: relative;
 }
 
 .time-label {
   background: var(--bg-card);
-  padding: 0 8px;
-  font-size: 0.72rem;
+  padding: 0 12px;
+  font-size: 0.75rem;
   color: var(--text-muted);
   font-weight: 500;
   text-align: right;
@@ -1351,7 +1351,7 @@ table tbody tr:last-child td {
 /* Current time line */
 .current-time-line {
   position: absolute;
-  left: 60px;
+  left: 80px;
   right: 0;
   height: 2px;
   background: var(--danger);
@@ -1362,7 +1362,7 @@ table tbody tr:last-child td {
 .current-time-line::before {
   content: attr(data-time);
   position: absolute;
-  left: -60px;
+  left: -70px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--danger);
