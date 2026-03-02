@@ -7,6 +7,7 @@ import Patients from './components/Patients'
 import Financeiro from './components/Financeiro'
 import Procedimentos from './components/Procedimentos'
 import Toast from './components/Toast'
+import LoginScreen from './components/LoginScreen'
 import { AppointmentModal, AppointmentDetailModal, PatientModal, TransactionModal, ProntuarioModal, ProcedureModal } from './components/Modals'
 import { IconDashboard, IconCalendar, IconUsers, IconDollar, IconLogoAL, IconBell, IconSettings, IconClock, IconX, IconCheck, IconListCheck } from './components/Icons'
 
@@ -180,6 +181,31 @@ function NotificationDropdown({ isOpen, onClose, onConfirmPayment, confirmedIds,
 }
 
 export default function App() {
+  // Auth state
+  const [user, setUser] = React.useState(() => {
+    const saved = sessionStorage.getItem('clinica_user')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  function handleLogin(userData) {
+    setUser(userData)
+    sessionStorage.setItem('clinica_user', JSON.stringify(userData))
+  }
+
+  function handleLogout() {
+    setUser(null)
+    sessionStorage.removeItem('clinica_user')
+  }
+
+  // Show login screen if not authenticated
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} />
+  }
+
+  return <AppMain user={user} onLogout={handleLogout} />
+}
+
+function AppMain({ user, onLogout }) {
   const [activeTab, setActiveTab] = React.useState('dashboard')
   const [toast, setToast] = React.useState(null)
   const [modal, setModal] = React.useState(null)
@@ -331,7 +357,9 @@ export default function App() {
             <button className="topbar-icon-btn" title="Configurações">
               <IconSettings />
             </button>
-            <div className="topbar-avatar" title="Dra. Ana Letícia">AL</div>
+            <div className="topbar-avatar" title={`${user.name} — Clique para sair`} onClick={onLogout} style={{ cursor: 'pointer' }}>
+              {(() => { const parts = user.name.replace(/^(Dra?\.|Dr\.)\s*/i, '').trim().split(' '); return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase() })()}
+            </div>
           </div>
         </header>
 
