@@ -1,6 +1,7 @@
 import React from 'react'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { IconSearch, IconPlus, IconEdit, IconTrash } from './Icons'
+import ConfirmDialog from './ConfirmDialog'
 
 const DEMO_PROCEDURES = [
     { id: 'demo1', name: 'Avaliação odontológica', value: 180 },
@@ -15,6 +16,7 @@ export default function Procedimentos({ onShowModal, showToast }) {
     const [procedures, setProcedures] = React.useState([])
     const [loading, setLoading] = React.useState(true)
     const [search, setSearch] = React.useState('')
+    const [deletingProcedure, setDeletingProcedure] = React.useState(null)
 
     React.useEffect(() => {
         loadProcedures()
@@ -40,6 +42,24 @@ export default function Procedimentos({ onShowModal, showToast }) {
     const filtered = procedures.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
     )
+
+    async function executeDelete() {
+        if (!supabaseConfigured) {
+            showToast('✅ Procedimento excluído! (modo demo)')
+            setProcedures(prev => prev.filter(p => p.id !== deletingProcedure.id))
+            setDeletingProcedure(null)
+            return
+        }
+
+        const { error } = await supabase.from('procedures').delete().eq('id', deletingProcedure.id)
+        if (error) {
+            showToast('Erro ao excluir: ' + error.message, 'error')
+        } else {
+            showToast('✅ Procedimento excluído!')
+            loadProcedures()
+        }
+        setDeletingProcedure(null)
+    }
 
     return (
         <div style={{ padding: '0 20px', maxWidth: 800, margin: '0 auto' }}>
@@ -91,7 +111,13 @@ export default function Procedimentos({ onShowModal, showToast }) {
                                                 >
                                                     <IconEdit />
                                                 </button>
-                                                {/* In a real app we might soft-delete or check constraints before deleting */}
+                                                <button
+                                                    className="btn-icon"
+                                                    title="Excluir"
+                                                    onClick={() => setDeletingProcedure(p)}
+                                                >
+                                                    <IconTrash />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -101,6 +127,17 @@ export default function Procedimentos({ onShowModal, showToast }) {
                     </div>
                 )}
             </div>
+
+            {deletingProcedure && (
+                <ConfirmDialog
+                    title="Excluir Procedimento"
+                    message={`Tem certeza que deseja excluir o procedimento "${deletingProcedure.name}"? Esta ação não pode ser desfeita.`}
+                    confirmLabel="Excluir Procedimento"
+                    type="danger"
+                    onConfirm={executeDelete}
+                    onCancel={() => setDeletingProcedure(null)}
+                />
+            )}
         </div>
     )
 }
